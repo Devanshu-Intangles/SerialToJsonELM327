@@ -48,7 +48,7 @@ HANDLE hComm;  // Handle to the Serial port
         goto Exit1;
     }
 
-    dcbSerialParams.BaudRate = CBR_9600;      //BaudRate = 9600
+    dcbSerialParams.BaudRate = CBR_38400;      //BaudRate = 9600
     dcbSerialParams.ByteSize = 8;             //ByteSize = 8
     dcbSerialParams.StopBits = ONESTOPBIT;    //StopBits = 1
     dcbSerialParams.Parity = NOPARITY;      //Parity = None
