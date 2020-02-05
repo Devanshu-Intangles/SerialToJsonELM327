@@ -3,110 +3,42 @@
 #include <string.h>
 #define READ_TIMEOUT      500      // milliseconds
 #define PORT_NO  "COM3"
+#define SERIAL_BUFF_SIZE 64
 
 BOOL InitializeSerialPort(HANDLE* hComm,char *portName);
-BOOL WriteToSerialPort(HANDLE hcomm,char *serialBuffer, DWORD* BytesWritten );
+BOOL WriteToSerialPort(HANDLE hComm,char *serialBuffer, DWORD* BytesWritten );
+BOOL ReadFromSerialPort(HANDLE hComm, char * serialBuffer);
 
 int main(){
 HANDLE hComm;  // Handle to the Serial port
     BOOL   Status; // Status
-    char SerialBuffer[64] = "ATZ"; //Buffer to send and receive data
+    char SerialBuffer[SERIAL_BUFF_SIZE] = "ATZ"; //Buffer to send and receive data
     DWORD BytesWritten = 0;          // No of bytes written to the port
-    DWORD dwEventMask;     // Event mask to trigger
-    unsigned char  ReadData;        //temperory Character
-    unsigned char tempChar;
-    DWORD NoBytesRead;     // Bytes read by ReadFile()
-    unsigned char loop = 0;
-    int index=0;
 
     char pszPortName[10] = PORT_NO; //com port id
     
 
-    // Status= InitializeSerialPort(&hComm,pszPortName);
-    // if(Status==FALSE){
-    //     system("pause");
-    //     return 0;
-    // }
+    Status= InitializeSerialPort(&hComm,pszPortName);
+    if(Status==FALSE){
+        system("pause");
+        return 0;
+    }
 
 
     printf("\n\nEnter your message: ");
     scanf("%s", SerialBuffer);
-    // strcat(SerialBuffer,"\r");
+    strcat(SerialBuffer,"\r");
     printf("Sending %s to COM port ", SerialBuffer);
 
-     Status =WriteToSerialPort(hComm,SerialBuffer, &BytesWritten);
+    Status =WriteToSerialPort(hComm,SerialBuffer, &BytesWritten);
     if (Status == FALSE)
     {
         system("pause");
         return 0;
     }
-    //Writing data to Serial Port
-    Status = WriteFile(hComm,// Handle to the Serialport
-                       SerialBuffer,            // Data to be written to the port
-                       sizeof(SerialBuffer),   // No of bytes to write into the port
-                       &BytesWritten,  // No of bytes written to the port
-                       NULL);
-    if (Status == FALSE)
-    {
-        printf("\nFail to Written");
-        goto Exit1;
-    }
-    else
-    {
-        printf("\nWrite sucess");
-    }
     
-
-    //print numbers of byte written to the serial port
-    printf("\nNumber of bytes written to the serail port = %d\n\n", BytesWritten);
-
-    loop=0;
-//Setting Receive Mask
-    Status = SetCommMask(hComm, EV_RXCHAR);
-
-    if (Status == FALSE)
-    {
-        printf("\nError to in Setting CommMask\n\n");
-        goto Exit1;
-    }
-
-
-    //Setting WaitComm() Event
-    Status = WaitCommEvent(hComm, &dwEventMask, NULL); //Wait for the character to be received
-    if (Status == FALSE)
-    {
-        printf("\nError! in Setting WaitCommEvent()\n\n");
-        goto Exit1;
-    }
-
-    //Read data and store in a buffer
-    do
-    {
-        Status = ReadFile(hComm, &tempChar, sizeof(tempChar), &NoBytesRead, NULL);
-        SerialBuffer[loop] = tempChar;
-        ++loop;
-    }
-    while (NoBytesRead > 0);
-
-    --loop; //Get Actual length of received data
-
-    printf("\nNumber of bytes received = %d\n\n", loop);
-
-    //print receive data on console
-    printf("\n\n");
-
-    index = 0;
-    for (index = 0; index < loop; ++index)
-    {
-        printf("%c", SerialBuffer[index]);
-    }
-
-    printf("\n\n");
-
-Exit1:
-    CloseHandle(hComm);//Closing the Serial Port
-Exit2:
-    system("pause");
+    ReadFromSerialPort(hComm, SerialBuffer);
+    
     return 0;
 }
 
@@ -158,10 +90,10 @@ BOOL WriteToSerialPort(HANDLE hComm,char *serialBuffer, DWORD* BytesWritten ){
     BOOL Status;
     Status = WriteFile(hComm,// Handle to the Serialport
                        serialBuffer,            // Data to be written to the port
-                       sizeof(serialBuffer),   // No of bytes to write into the port
+                       SERIAL_BUFF_SIZE,   // No of bytes to write into the port
                        BytesWritten,  // No of bytes written to the port
                        NULL);
-    printf("\nSerialBuffer in method = %s and sizeof of buffer=%d \n",serialBuffer, sizeof(serialBuffer));
+    // printf("\nSerialBuffer in method = %s and sizeof of buffer=%d \n",serialBuffer, sizeof(serialBuffer));
     if (Status == FALSE)
     {
         CloseHandle(hComm);//Closing the Serial Port
@@ -177,5 +109,56 @@ BOOL WriteToSerialPort(HANDLE hComm,char *serialBuffer, DWORD* BytesWritten ){
     printf("\nNumber of bytes written to the serail port = %d\n\n", *BytesWritten);
     return TRUE;
 
+
+
+}
+
+BOOL ReadFromSerialPort(HANDLE hComm, char * serialBuffer){
+    DWORD dwEventMask,NoBytesRead;     //  Event mask to trigger // Bytes read by ReadFile();    
+    int loop=0,index=0;
+    unsigned char tempChar;
+    BOOL Status;
+    //Setting Receive Mask
+    Status = SetCommMask(hComm, EV_RXCHAR);
+
+    if (Status == FALSE)
+    {
+        printf("\nError to in Setting CommMask\n\n");
+        CloseHandle(hComm);//Closing the Serial Port
+        return FALSE;
+    }
+
+
+    //Setting WaitComm() Event
+    Status = WaitCommEvent(hComm, &dwEventMask, NULL); //Wait for the character to be received
+    if (Status == FALSE)
+    {
+        printf("\nError! in Setting WaitCommEvent()\n\n");
+        CloseHandle(hComm);//Closing the Serial Port
+        return FALSE;
+    }
+
+    //Read data and store in a buffer
+    do
+    {
+        Status = ReadFile(hComm, &tempChar, sizeof(tempChar), &NoBytesRead, NULL);
+        serialBuffer[loop] = tempChar;
+        ++loop;
+    }
+    while (NoBytesRead > 0);
+
+    --loop; //Get Actual length of received data
+
+    printf("\nNumber of bytes received = %d\n\n", loop);
+
+    //print receive data on console
+    printf("\n\n");
+
+    index = 0;
+    for (index = 0; index < loop; ++index)
+    {
+        printf("%c", serialBuffer[index]);
+    }
+    printf("\n\n");
 }
 
