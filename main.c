@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <string.h>
 #define READ_TIMEOUT      500      // milliseconds
+#define PORT_NO  "COM3"
 
 BOOL InitializeSerialPort(HANDLE* hComm,char *portName);
+BOOL WriteToSerialPort(HANDLE hcomm,char *serialBuffer, DWORD* BytesWritten );
 
 int main(){
 HANDLE hComm;  // Handle to the Serial port
     BOOL   Status; // Status
-    DCB dcbSerialParams = { 0 };  // Initializing DCB structure
-    COMMTIMEOUTS timeouts = { 0 };  //Initializing timeouts structure
     char SerialBuffer[64] = "ATZ"; //Buffer to send and receive data
     DWORD BytesWritten = 0;          // No of bytes written to the port
     DWORD dwEventMask;     // Event mask to trigger
@@ -19,72 +19,27 @@ HANDLE hComm;  // Handle to the Serial port
     unsigned char loop = 0;
     int index=0;
 
-    char pszPortName[10] = "COM3"; //com port id
+    char pszPortName[10] = PORT_NO; //com port id
     
 
-
-    //Enter the com port id
-    // printf("Enter the Com Port: ");
-    // scanf("%s", pszPortName);
-    Status= InitializeSerialPort(&hComm,pszPortName);
-    if(Status==FALSE){
-        system("pause");
-        return 0;
-    }
-    //Open the serial com port
-    // hComm = CreateFile("COM3", //friendly name
-    //                    GENERIC_READ | GENERIC_WRITE,      // Read/Write Access
-    //                    0,                                 // No Sharing, ports cant be shared
-    //                    NULL,                              // No Security
-    //                    OPEN_EXISTING,                     // Open existing port only
-    //                    0,                                 // Non Overlapped I/O
-    //                    NULL);                             // Null for Comm Devices
-
-    // if (hComm == INVALID_HANDLE_VALUE)
-    // {
-    //     printf("\n Port can't be opened\n\n");
-    //     goto Exit2;
-    // }
-
-    // //Setting the Parameters for the SerialPort
-    // dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-
-    // Status = GetCommState(hComm, &dcbSerialParams); //retreives  the current settings
-    // if (Status == FALSE)
-    // {
-    //     printf("\nError to Get the Com state\n\n");
-    //     goto Exit1;
-    // }
-
-    // dcbSerialParams.BaudRate = CBR_38400;      //BaudRate = 9600
-    // dcbSerialParams.ByteSize = 8;             //ByteSize = 8
-    // dcbSerialParams.StopBits = ONESTOPBIT;    //StopBits = 1
-    // dcbSerialParams.Parity = NOPARITY;      //Parity = None
-
-    // Status = SetCommState(hComm, &dcbSerialParams);
-    // if (Status == FALSE)
-    // {
-    //     printf("\nError to Setting DCB Structure\n\n");
-    //     goto Exit1;
-    // }
-
-    // //Setting Timeouts
-    // timeouts.ReadIntervalTimeout = 50;
-    // timeouts.ReadTotalTimeoutConstant = 50;
-    // timeouts.ReadTotalTimeoutMultiplier = 10;
-    // timeouts.WriteTotalTimeoutConstant = 50;
-    // timeouts.WriteTotalTimeoutMultiplier = 10;
-    // if (SetCommTimeouts(hComm, &timeouts) == FALSE)
-    // {
-    //     printf("\nError to Setting Time outs");
-    //     goto Exit1;
+    // Status= InitializeSerialPort(&hComm,pszPortName);
+    // if(Status==FALSE){
+    //     system("pause");
+    //     return 0;
     // }
 
 
     printf("\n\nEnter your message: ");
     scanf("%s", SerialBuffer);
-    strcat(SerialBuffer,"\r");
+    // strcat(SerialBuffer,"\r");
     printf("Sending %s to COM port ", SerialBuffer);
+
+     Status =WriteToSerialPort(hComm,SerialBuffer, &BytesWritten);
+    if (Status == FALSE)
+    {
+        system("pause");
+        return 0;
+    }
     //Writing data to Serial Port
     Status = WriteFile(hComm,// Handle to the Serialport
                        SerialBuffer,            // Data to be written to the port
@@ -196,5 +151,31 @@ BOOL InitializeSerialPort(HANDLE * hComm, char *portName){
         CloseHandle(*hComm);
         return FALSE;
     }
+    return TRUE;
+}
+
+BOOL WriteToSerialPort(HANDLE hComm,char *serialBuffer, DWORD* BytesWritten ){
+    BOOL Status;
+    Status = WriteFile(hComm,// Handle to the Serialport
+                       serialBuffer,            // Data to be written to the port
+                       sizeof(serialBuffer),   // No of bytes to write into the port
+                       BytesWritten,  // No of bytes written to the port
+                       NULL);
+    printf("\nSerialBuffer in method = %s and sizeof of buffer=%d \n",serialBuffer, sizeof(serialBuffer));
+    if (Status == FALSE)
+    {
+        CloseHandle(hComm);//Closing the Serial Port
+        printf("\nFail to Written");
+        return FALSE;
+    }
+    else
+    {
+        printf("\nWrite sucess");
+    }
+    
+    //print numbers of byte written to the serial port
+    printf("\nNumber of bytes written to the serail port = %d\n\n", *BytesWritten);
+    return TRUE;
+
 }
 
