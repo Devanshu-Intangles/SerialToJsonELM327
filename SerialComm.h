@@ -66,21 +66,22 @@ BOOL InitializeSerialPort(HANDLE *hComm, char *portName)
 
 BOOL WriteToSerialPort(HANDLE hComm, char *serialBuffer, DWORD *BytesWritten)
 {
-    BOOL Status;
+    BOOL Status;//atma
+    char *x="d";
     strcat(serialBuffer, "\r");          //Add carriage return at the end of the string before sending to ELM327
+    //printf("Serial Buffer size =%d\n length of string=%d",sizeof(serialBuffer),strlen(serialBuffer));
     Status = WriteFile(hComm,            // Handle to the Serialport
                        serialBuffer,     // Data to be written to the port
-                       SERIAL_BUFF_SIZE, // No of bytes to write into the port
+                       strlen(serialBuffer), // No of bytes to write into the port
                        BytesWritten,     // No of bytes written to the port
                        NULL);
     // printf("\nSerialBuffer in method = %s and sizeof of buffer=%d \n",serialBuffer, sizeof(serialBuffer));
     if (Status == FALSE)
     {
         CloseHandle(hComm); //Closing the Serial Port
-        printf("\nFail to Written");
+        printf("\nFailed to Write");
         return FALSE;
     }
-
     //print numbers of byte written to the serial port
     //printf("\nNumber of bytes written to the serail port = %d\n\n", *BytesWritten);
     return TRUE;
@@ -94,7 +95,7 @@ BOOL ReadFromSerialPort(HANDLE hComm, char *serialBuffer)
     BOOL Status;
     //Setting Receive Mask;
     Status = SetCommMask(hComm, EV_RXCHAR);
-
+    memset(serialBuffer,0,SERIAL_BUFF_SIZE);
     if (Status == FALSE)
     {
         printf("\nError to in Setting CommMask\n\n");
@@ -123,6 +124,7 @@ BOOL ReadFromSerialPort(HANDLE hComm, char *serialBuffer)
 
     //print receive data on console
 
-    printf("%s", serialBuffer);
+    printf("Content of SerialRxBuffer= %s", serialBuffer);
     return TRUE;
+    
 }
