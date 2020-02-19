@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "serialcomm.h": "c",
+        "elm327helper.h": "c"
+    }
+}

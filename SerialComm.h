@@ -1,21 +1,25 @@
+#ifndef SerialComm_H
+#define SerialComm_H
 #include <stdio.h>
 #include <windows.h>
 
 #define READ_TIMEOUT 500 // milliseconds
-#define PORT_NO "COM3"
+#define PORT_NO "\\\\.\\COM10"
 #define SERIAL_BUFF_SIZE 64
 
-BOOL InitializeSerialPort(HANDLE *hComm, char *portName);
-BOOL WriteToSerialPort(HANDLE hComm, char *serialBuffer, DWORD *BytesWritten);
-BOOL ReadFromSerialPort(HANDLE hComm, char *serialBuffer);
+HANDLE hComm;  
 
-BOOL InitializeSerialPort(HANDLE *hComm, char *portName)
+BOOL InitializeSerialPort(char *portName);
+BOOL WriteToSerialPort(char *serialBuffer, DWORD *BytesWritten);
+BOOL ReadFromSerialPort(char *serialBuffer);
+
+BOOL InitializeSerialPort(char *portName)
 {
     //Open the serial com port
     BOOL Status;                                      // Status
     DCB dcbSerialParams = {0};                        // Initializing DCB structure
     COMMTIMEOUTS timeouts = {0};                      //Initializing timeouts structure
-    *hComm = CreateFile(portName,                     //friendly name
+    hComm = CreateFile(portName,                     //friendly name
                         GENERIC_READ | GENERIC_WRITE, // Read/Write Access
                         0,                            // No Sharing, ports cant be shared
                         NULL,                         // No Security
@@ -23,17 +27,17 @@ BOOL InitializeSerialPort(HANDLE *hComm, char *portName)
                         0,                            // Non Overlapped I/O
                         NULL);                        // Null for Comm Devices
 
-    if (*hComm == INVALID_HANDLE_VALUE)
+    if (hComm == INVALID_HANDLE_VALUE)
     {
         printf("\n Port can't be opened\n\n");
         return FALSE;
     }
     dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-    Status = GetCommState(*hComm, &dcbSerialParams); //retreives  the current settings
+    Status = GetCommState(hComm, &dcbSerialParams); //retreives  the current settings
     if (Status == FALSE)
     {
         printf("\nError to Get the Com state\n\n");
-        CloseHandle(*hComm);
+        CloseHandle(hComm);
         return FALSE;
     }
 
@@ -42,11 +46,11 @@ BOOL InitializeSerialPort(HANDLE *hComm, char *portName)
     dcbSerialParams.StopBits = ONESTOPBIT; //StopBits = 1
     dcbSerialParams.Parity = NOPARITY;     //Parity = None
 
-    Status = SetCommState(*hComm, &dcbSerialParams);
+    Status = SetCommState(hComm, &dcbSerialParams);
     if (Status == FALSE)
     {
         printf("\nError to Setting DCB Structure\n\n");
-        CloseHandle(*hComm);
+        CloseHandle(hComm);
         return FALSE;
     }
     //Setting Timeouts
@@ -55,19 +59,18 @@ BOOL InitializeSerialPort(HANDLE *hComm, char *portName)
     timeouts.ReadTotalTimeoutMultiplier = 1;
     timeouts.WriteTotalTimeoutConstant = 5;
     timeouts.WriteTotalTimeoutMultiplier = 1;
-    if (SetCommTimeouts(*hComm, &timeouts) == FALSE)
+    if (SetCommTimeouts(hComm, &timeouts) == FALSE)
     {
         printf("\nError to Setting Time outs");
-        CloseHandle(*hComm);
+        CloseHandle(hComm);
         return FALSE;
     }
     return TRUE;
 }
 
-BOOL WriteToSerialPort(HANDLE hComm, char *serialBuffer, DWORD *BytesWritten)
+BOOL WriteToSerialPort(char *serialBuffer, DWORD *BytesWritten)
 {
-    BOOL Status;//atma
-    char *x="d";
+    BOOL Status;
     strcat(serialBuffer, "\r");          //Add carriage return at the end of the string before sending to ELM327
     //printf("Serial Buffer size =%d\n length of string=%d",sizeof(serialBuffer),strlen(serialBuffer));
     Status = WriteFile(hComm,            // Handle to the Serialport
@@ -87,7 +90,7 @@ BOOL WriteToSerialPort(HANDLE hComm, char *serialBuffer, DWORD *BytesWritten)
     return TRUE;
 }
 
-BOOL ReadFromSerialPort(HANDLE hComm, char *serialBuffer)
+BOOL ReadFromSerialPort(char *serialBuffer)
 {
     DWORD dwEventMask, NoBytesRead; //  Event mask to trigger // Bytes read by ReadFile();
     int loop = 0, index = 0;
@@ -124,7 +127,9 @@ BOOL ReadFromSerialPort(HANDLE hComm, char *serialBuffer)
 
     //print receive data on console
 
-    printf("Content of SerialRxBuffer= %s", serialBuffer);
+    printf("%s", serialBuffer);
     return TRUE;
     
 }
+
+#endif
