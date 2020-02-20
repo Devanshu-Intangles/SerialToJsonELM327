@@ -37,7 +37,7 @@ int main()
         SetDateTimeOfPacket(&packet, EndOfPacket);
         memset(Json,0,820);
         ConvertStructToPacketJson(packet, Json);
-        printf("%s\n", Json);
+        printf("%s\n\n", Json);
     }
     return 0;
 }

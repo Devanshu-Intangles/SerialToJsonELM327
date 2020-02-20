@@ -13,6 +13,7 @@ COMMTIMEOUTS timeouts = {0};                      //Initializing timeouts struct
 BOOL InitializeSerialPort(char *portName);
 BOOL WriteToSerialPort(char *serialBuffer, DWORD *BytesWritten);
 BOOL ReadFromSerialPort(char *serialBuffer);
+BOOL SetTotalTimeOut(int timeout);
 
 BOOL InitializeSerialPort(char *portName)
 {
@@ -130,6 +131,17 @@ BOOL ReadFromSerialPort(char *serialBuffer)
     // printf("%s", serialBuffer);
     return TRUE;
     
+}
+
+BOOL SetTotalTimeOut(int timeout){
+    timeouts.ReadTotalTimeoutConstant = timeout;
+        if (SetCommTimeouts(hComm, &timeouts) == FALSE)
+        {
+            printf("\nError to Setting Time outs");
+            CloseHandle(hComm);
+            return FALSE;
+        }
+        return TRUE;
 }
 
 #endif
