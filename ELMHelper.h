@@ -4,20 +4,27 @@
 #include <stdio.h>
 #include <string.h>
 #include "SerialComm.h"
+#include "Model.h"
 
 
 #define ATICReset "ATZ"
 #define ATSetJ1939 "ATSPA"
 #define ATSilentMon "ATCSM0"
+#define ATTurnHeaderOff "ATH0"
+#define ATTurnHeaderOn "ATH1"
+#define ATBatteryVoltage "ATRV"
+
+char SerialRxBuffer[SERIAL_BUFF_SIZE] = {0};  
+char SerialTxBuffer[SERIAL_BUFF_SIZE] = {0}; 
+DWORD BytesWritten = 0; 
 
 BOOL InitiliazeELMForJ1939();
-
+BOOL SetHeaderOnOff(BOOL val);
+BOOL SetBatteryVoltage(Packet * packet);
 
 
 BOOL InitiliazeELMForJ1939(){
-    DWORD BytesWritten = 0; 
-    char SerialRxBuffer[SERIAL_BUFF_SIZE] = {0};  
-    char SerialTxBuffer[SERIAL_BUFF_SIZE] = {0}; 
+     
     
     //Reset ELM327
     strncpy(SerialTxBuffer,ATICReset,SERIAL_BUFF_SIZE);
@@ -45,6 +52,20 @@ BOOL InitiliazeELMForJ1939(){
     ReadFromSerialPort(SerialRxBuffer);
 
     return TRUE;
+}
+
+BOOL SetHeaderOnOff(BOOL val){
+    val ?  strncpy(SerialTxBuffer,ATTurnHeaderOn,SERIAL_BUFF_SIZE):
+           strncpy(SerialTxBuffer,ATTurnHeaderOff,SERIAL_BUFF_SIZE);
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    ReadFromSerialPort(SerialRxBuffer);
+}
+
+BOOL SetBatteryVoltage(Packet * packet){
+    strncpy(SerialTxBuffer,ATBatteryVoltage,SERIAL_BUFF_SIZE);
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    ReadFromSerialPort(SerialRxBuffer);
+    // (*packet).VB=SerialRxBuffer;
 }
 
 #endif //
