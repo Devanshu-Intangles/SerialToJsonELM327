@@ -7,7 +7,8 @@
 #define PORT_NO "\\\\.\\COM10"
 #define SERIAL_BUFF_SIZE 64
 
-HANDLE hComm;  
+HANDLE hComm; 
+COMMTIMEOUTS timeouts = {0};                      //Initializing timeouts structure 
 
 BOOL InitializeSerialPort(char *portName);
 BOOL WriteToSerialPort(char *serialBuffer, DWORD *BytesWritten);
@@ -18,7 +19,6 @@ BOOL InitializeSerialPort(char *portName)
     //Open the serial com port
     BOOL Status;                                      // Status
     DCB dcbSerialParams = {0};                        // Initializing DCB structure
-    COMMTIMEOUTS timeouts = {0};                      //Initializing timeouts structure
     hComm = CreateFile(portName,                     //friendly name
                         GENERIC_READ | GENERIC_WRITE, // Read/Write Access
                         0,                            // No Sharing, ports cant be shared
@@ -55,7 +55,7 @@ BOOL InitializeSerialPort(char *portName)
     }
     //Setting Timeouts
     timeouts.ReadIntervalTimeout = 1;
-    timeouts.ReadTotalTimeoutConstant = 5000;
+    timeouts.ReadTotalTimeoutConstant = 200;
     timeouts.ReadTotalTimeoutMultiplier = 1;
     timeouts.WriteTotalTimeoutConstant = 5;
     timeouts.WriteTotalTimeoutMultiplier = 1;
@@ -127,7 +127,7 @@ BOOL ReadFromSerialPort(char *serialBuffer)
 
     //print receive data on console
 
-    printf("%s", serialBuffer);
+    // printf("%s", serialBuffer);
     return TRUE;
     
 }
