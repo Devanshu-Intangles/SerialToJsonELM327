@@ -2,13 +2,21 @@
 #include <stdio.h>
 #include "SerialComm.h"
 #include "ELMHelper.h"
+#include <time.h>
+#include "Model.h"
+#include "timehelper.h"
+#include "JsonHelper.h"
+
 // extern BOOL InitiliazeELMForJ1939();
+
 
 int main()
 {
-    BOOL Status;                               // Status
+    Packet packet={"0","DS","TS","P","DT","DT_UDS",0,"DE","TE",0,0};
+    BOOL Status;
     char SerialRxBuffer[SERIAL_BUFF_SIZE] = {0}; //Buffer to receive data
     char SerialTxBuffer[SERIAL_BUFF_SIZE] = {0}; //Buffer to send data
+    char Json[256]={0};
     DWORD BytesWritten = 0;                    // No of bytes written to the port
 
     char *pszPortName = PORT_NO; //com port id
@@ -18,26 +26,10 @@ int main()
         system("pause");
         return 0;
     }
-    printf("Initialization done sucefully\n");
     InitiliazeELMForJ1939();
-    // printf("Hello World!");
-    while(TRUE)
-    {
-        memset(SerialTxBuffer,0,sizeof(SerialTxBuffer));
-        printf("\n\nEnter your message: ");
-        scanf("%s", SerialTxBuffer);
-        // if (!WriteToSerialPort(SerialTxBuffer, &BytesWritten))
-        // {
-        //     system("pause");
-        //     return 0;
-        // }
 
-        // if (!ReadFromSerialPort(SerialRxBuffer))
-        // {
-        //     system("pause");
-        //     return 0;
-        // }
-        
-    }
+    SetDateTimeOfPacket(&packet,StartOfPacket);
+    SetDateTimeOfPacket(&packet,EndOfPacket);
+    ConvertStructToPacketJson(packet, Json);
     return 0;
 }
