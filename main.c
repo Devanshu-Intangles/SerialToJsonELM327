@@ -11,6 +11,7 @@
 
 int main()
 {
+    Packet packet = {"0", "DS", "TS", "P", "DT", "DAA", 0, "DE", "TE", 0, 0};
     
     DWORD BytesWritten = 0; // No of bytes written to the port
 
@@ -32,11 +33,12 @@ int main()
         SetJ1939Params(&packet);
         //Set Fault codes
         SetHeaderOn(1);
-        logg=FALSE;
         SetTroubleCodes(&packet);
-        logg=FALSE;
+        ReadFromSerialPort(SerialRxBuffer);
         //Set Battery volatge
+        logg=FALSE;
         SetBatteryVoltage(&packet);
+        logg=FALSE;
         // Set End Date and Time
         SetDateTimeOfPacket(&packet, EndOfPacket);
         // printf("\npacket.p=%spacket.dt=%s\n",packet.P,packet.DT);

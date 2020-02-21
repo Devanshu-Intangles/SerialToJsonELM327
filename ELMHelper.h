@@ -74,11 +74,11 @@ BOOL SetBatteryVoltage(Packet *packet)
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     ReadFromSerialPort(SerialRxBuffer);
     printf("SerialRxBuffer=%s\n",SerialRxBuffer);
-    // strtok(SerialRxBuffer, "\n");
-    printf("Strtok=%s\n",strtok(SerialRxBuffer, "\n"));
-    printf("VB= %s\n", strtok(NULL, "\n"));
-    // (*packet).VB = strtod(strtok(NULL, "\n"), &eptr);
-    // (*packet).E = (*packet).VB > 0 ? 1 : 0;
+    strtok(SerialRxBuffer, "\r\n");
+    //printf("Strtok=%s\n",strtok(SerialRxBuffer, "\n"));
+    // printf("VB= %s\n", strtok(NULL, "\n"));
+    (*packet).VB = strtod(strtok(NULL, "\n"), &eptr);
+    (*packet).E = (*packet).VB > 0 ? 1 : 0;
 }
 
 BOOL SetJ1939Params(Packet *packet)

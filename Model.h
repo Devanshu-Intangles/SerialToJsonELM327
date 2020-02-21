@@ -20,7 +20,7 @@ typedef struct
     int DC3 ;
 }Packet;
 
-Packet packet = {"0", "DS", "TS", "P", "DT", "DAA", 0, "DE", "TE", 0, 0};
+
     char Json[820] = {0};
 
 enum HFreqParams{

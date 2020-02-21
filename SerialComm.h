@@ -128,6 +128,7 @@ BOOL ReadFromSerialPort(char *serialBuffer)
         if(lineCount>=21){
             WriteToSerialPort(RxBuffer,&BytesWritten);
             PurgeComm(hComm,0x0008);
+            memset(serialBuffer,0,SERIAL_BUFF_SIZE);
             break;
         }
     } while (NoBytesRead > 0);
@@ -137,8 +138,8 @@ BOOL ReadFromSerialPort(char *serialBuffer)
     --loop; //Get Actual length of received data
 
     //print receive data on console
-
-    // printf("%s", serialBuffer);
+    if(logg)
+        printf("%s", serialBuffer);
     return TRUE;
     
 }
