@@ -73,7 +73,7 @@ BOOL SetBatteryVoltage(Packet *packet)
     memset(SerialRxBuffer,0,SERIAL_BUFF_SIZE);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     ReadFromSerialPort(SerialRxBuffer);
-    printf("SerialRxBuffer=%s\n",SerialRxBuffer);
+    // printf("SerialRxBuffer=%s\n",SerialRxBuffer);
     strtok(SerialRxBuffer, "\r\n");
     //printf("Strtok=%s\n",strtok(SerialRxBuffer, "\n"));
     // printf("VB= %s\n", strtok(NULL, "\n"));
