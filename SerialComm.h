@@ -2,10 +2,11 @@
 #define SerialComm_H
 #include <stdio.h>
 #include <windows.h>
+#include "Model.h"
 
 #define READ_TIMEOUT 500 // milliseconds
 #define PORT_NO "\\\\.\\COM10"
-#define SERIAL_BUFF_SIZE 64
+#define SERIAL_BUFF_SIZE 512
 
 HANDLE hComm; 
 COMMTIMEOUTS timeouts = {0};                      //Initializing timeouts structure 
@@ -33,6 +34,7 @@ BOOL InitializeSerialPort(char *portName)
         printf("\n Port can't be opened\n\n");
         return FALSE;
     }
+
     dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
     Status = GetCommState(hComm, &dcbSerialParams); //retreives  the current settings
     if (Status == FALSE)
@@ -54,18 +56,7 @@ BOOL InitializeSerialPort(char *portName)
         CloseHandle(hComm);
         return FALSE;
     }
-    //Setting Timeouts
-    timeouts.ReadIntervalTimeout = 1;
-    timeouts.ReadTotalTimeoutConstant = 200;
-    timeouts.ReadTotalTimeoutMultiplier = 1;
-    timeouts.WriteTotalTimeoutConstant = 5;
-    timeouts.WriteTotalTimeoutMultiplier = 1;
-    if (SetCommTimeouts(hComm, &timeouts) == FALSE)
-    {
-        printf("\nError to Setting Time outs");
-        CloseHandle(hComm);
-        return FALSE;
-    }
+    SetTotalTimeOut(200);
     return TRUE;
 }
 
@@ -93,11 +84,13 @@ BOOL WriteToSerialPort(char *serialBuffer, DWORD *BytesWritten)
 
 BOOL ReadFromSerialPort(char *serialBuffer)
 {
-    DWORD dwEventMask, NoBytesRead; //  Event mask to trigger // Bytes read by ReadFile();
-    int loop = 0, index = 0;
+    DWORD dwEventMask, NoBytesRead,BytesWritten; //  Event mask to trigger // Bytes read by ReadFile();
+    int loop = 0, index = 0,lineCount=0;
     unsigned char tempChar;
+    char RxBuffer[64]="stop";
     BOOL Status;
     //Setting Receive Mask;
+    
     Status = SetCommMask(hComm, EV_RXCHAR);
     memset(serialBuffer,0,SERIAL_BUFF_SIZE);
     if (Status == FALSE)
@@ -106,7 +99,7 @@ BOOL ReadFromSerialPort(char *serialBuffer)
         CloseHandle(hComm); //Closing the Serial Port
         return FALSE;
     }
-
+    
     //Setting WaitComm() Event
     Status = WaitCommEvent(hComm, &dwEventMask, NULL); //Wait for the character to be received
     if (Status == FALSE)
@@ -115,14 +108,31 @@ BOOL ReadFromSerialPort(char *serialBuffer)
         CloseHandle(hComm); //Closing the Serial Port
         return FALSE;
     }
-
+    
     //Read data and store in a buffer
     do
     {
+        // if(logg)
+        // printf("\11111111111111  trouble%s\n",packet.P);
         Status = ReadFile(hComm, &tempChar, sizeof(tempChar), &NoBytesRead, NULL);
         serialBuffer[loop] = tempChar;
         ++loop;
+        if(tempChar=='\n'){
+           
+            lineCount++;
+            // printf("LineCount=%d\n",lineCount);
+            // printf("line count= %d\n",lineCount);
+        }
+        // if(logg)
+        // printf("\222222222222  trouble%s\n",packet.P);
+        if(lineCount>=21){
+            WriteToSerialPort(RxBuffer,&BytesWritten);
+            PurgeComm(hComm,0x0008);
+            break;
+        }
     } while (NoBytesRead > 0);
+    // if(logg)
+    //     printf("\3333333333333333 trouble%s\n",packet.P);
 
     --loop; //Get Actual length of received data
 
@@ -134,6 +144,11 @@ BOOL ReadFromSerialPort(char *serialBuffer)
 }
 
 BOOL SetTotalTimeOut(int timeout){
+    //Setting Timeouts
+    timeouts.WriteTotalTimeoutConstant = 5;
+    timeouts.WriteTotalTimeoutMultiplier = 1;
+    timeouts.ReadIntervalTimeout = 1;
+    timeouts.ReadTotalTimeoutMultiplier = 1;
     timeouts.ReadTotalTimeoutConstant = timeout;
         if (SetCommTimeouts(hComm, &timeouts) == FALSE)
         {
