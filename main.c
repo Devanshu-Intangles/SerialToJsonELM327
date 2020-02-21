@@ -11,7 +11,7 @@
 
 int main()
 {
-    Packet packet = {"0", "DS", "TS", "P", "DT", "DAA", 0, "DE", "TE", 0, 0};
+   
     
     DWORD BytesWritten = 0; // No of bytes written to the port
 

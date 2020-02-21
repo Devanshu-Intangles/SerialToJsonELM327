@@ -128,7 +128,7 @@ BOOL ReadFromSerialPort(char *serialBuffer)
         if(lineCount>=21){
             WriteToSerialPort(RxBuffer,&BytesWritten);
             PurgeComm(hComm,0x0008);
-            memset(serialBuffer,0,SERIAL_BUFF_SIZE);
+            // memset(serialBuffer,0,SERIAL_BUFF_SIZE);
             break;
         }
     } while (NoBytesRead > 0);
