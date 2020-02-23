@@ -1,6 +1,11 @@
 {
     "files.associations": {
         "serialcomm.h": "c",
-        "elm327helper.h": "c"
+        "elm327helper.h": "c",
+        "string": "cpp",
+        "timehelper.h": "c",
+        "*.tcc": "cpp",
+        "jsonhelper.h": "c",
+        "elmhelper.h": "c"
     }
 }
