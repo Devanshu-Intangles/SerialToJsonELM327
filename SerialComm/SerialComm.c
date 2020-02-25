@@ -126,7 +126,7 @@ BOOL ReadFromSerialPort(char *serialBuffer)
 
     //print receive data on console
     // if(logg)
-    //     printf("%s", serialBuffer);
+    // printf("%s", serialBuffer);
     return TRUE;
     
 }

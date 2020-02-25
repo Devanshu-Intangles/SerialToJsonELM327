@@ -7,14 +7,14 @@
 typedef struct
 {
     char * T ;
-    char * DS ;
-    char * TS ;
+    char DS[10] ;
+    char TS[10] ;
     char * P ;
     char * DT ;
     char * DT_UDS ;
     double VB ;
-    char * DE ;
-    char * TE ;
+    char DE[10] ;
+    char TE[10] ;
     int E ;
     int DC3 ;
 }Packet;
@@ -39,5 +39,7 @@ enum PacketPosition{
     StartOfPacket,
     EndOfPacket
 };
+
+
 
 #endif //

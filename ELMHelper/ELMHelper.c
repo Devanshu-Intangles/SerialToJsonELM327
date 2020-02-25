@@ -1,15 +1,21 @@
 #include "ELMHelper.h"
 
-
 char SerialRxBuffer[SERIAL_BUFF_SIZE] = {0};
 char SerialTxBuffer[SERIAL_BUFF_SIZE] = {0};
 char ParamResult[820] = {0};
 char DT[502] = {0};
 DWORD BytesWritten = 0;
 
+int priorityParam15765[]={0x0C,0x04,0x0B,0x5E,0x06,0x07,0x10};
+
 BOOL InitiliazeELMForJ1939()
 {
-
+    // Initialize Serial Port
+    if (!InitializeSerialPort(PORT_NO))
+    {
+        system("pause");
+        return 0;
+    }
     //Reset ELM327
     strncpy(SerialTxBuffer, ATICReset, SERIAL_BUFF_SIZE);
     if (!WriteToSerialPort(SerialTxBuffer, &BytesWritten))
@@ -23,6 +29,40 @@ BOOL InitiliazeELMForJ1939()
 
     //Set protocol as J1939
     strncpy(SerialTxBuffer, ATSetJ1939, SERIAL_BUFF_SIZE);
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    //Read
+    ReadFromSerialPort(SerialRxBuffer);
+
+    //Set silent mointoring off
+    strncpy(SerialTxBuffer, ATSilentMon, SERIAL_BUFF_SIZE);
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    //Read
+    ReadFromSerialPort(SerialRxBuffer);
+
+    return TRUE;
+}
+
+BOOL InitiliazeELMFor15765()
+{
+    // Initialize Serial Port
+    if (!InitializeSerialPort(PORT_NO))
+    {
+        system("pause");
+        return 0;
+    }
+    //Reset ELM327
+    strncpy(SerialTxBuffer, ATICReset, SERIAL_BUFF_SIZE);
+    if (!WriteToSerialPort(SerialTxBuffer, &BytesWritten))
+    {
+        system("pause");
+        printf("Failed to write\n");
+        return 0;
+    }
+    //Read ELM version
+    ReadFromSerialPort(SerialRxBuffer);
+
+    //Set protocol as 15765
+    strncpy(SerialTxBuffer, ATSet15765, SERIAL_BUFF_SIZE);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     //Read
     ReadFromSerialPort(SerialRxBuffer);
@@ -64,6 +104,7 @@ BOOL SetJ1939Params(Packet *packet)
     memset(ParamResult, 0, 820);
     for (i = FEEF; i <= FEEE; i++)
     {
+        // Decrease timeout for High frequency parameter
         SetTotalTimeOut(200);
         for (j = F004; j <= FEF6; j++)
         {
@@ -71,6 +112,7 @@ BOOL SetJ1939Params(Packet *packet)
             ReadHfParam(j, ParamResult);
             strcat(ParamResult, ",");
         }
+        // Increase timeout for low frequency parameter
         SetTotalTimeOut(1000);
         ReadLfParam(i, ParamResult);
         strcat(ParamResult, ";");
@@ -78,7 +120,108 @@ BOOL SetJ1939Params(Packet *packet)
     // printf("\nParamResult=%s\n",ParamResult);
     (*packet).P = ParamResult;
 }
+BOOL Set15765Params(Packet *packet){
+    int suppPIDs=1, pidChunkCounter=0,i=0,j=0,availableParamCount=0,
+    priorityParmAvailable[7]={0},availableParam[100]={0},priorityCount=0,lowPriorityCount=0,
+    lowpriorityParamAvailable[100]={0};
+    char paramPacket[1200]={0}, tempArr[20]={0};
+    BOOL flag=TRUE;
+    while (suppPIDs&1!=0)
+    {
+        suppPIDs=FindSupportedPIDs(pidChunkCounter);
+        // printf("Supported PIDs==int=%d, hex=%X\n ",suppPIDs,suppPIDs);
+        for (i = 1; i < 31; i++)
+        {
+            if(1<<(pidChunkCounter-i) & suppPIDs){
+                //printf("Command given to ELM327==01%02X\n",i+pidChunkCounter);
+                availableParam[availableParamCount]=i+pidChunkCounter;
+                availableParamCount++;
+                // sprintf(SerialTxBuffer,"01%02X",i+pidChunkCounter);
+                // WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+                // ReadFromSerialPort(SerialRxBuffer);
+            }
+        }
+        pidChunkCounter+=32;
+    }
 
+    for(i=0;i<7;i++){
+        for(j=0;j<availableParamCount;j++){
+            if(priorityParam15765[i]==availableParam[j]){
+                priorityParmAvailable[priorityCount]=priorityParam15765[i];
+                // printf("HP=%02X\n",priorityParam15765[i]);
+                priorityCount++;
+            }
+        }
+    }
+    for(i=0;i<availableParamCount;i++){
+        flag=TRUE;
+        for(j=0;j<7;j++){
+            if(availableParam[i]==priorityParam15765[j]){
+                flag=FALSE;
+            }
+        }
+        if(flag){
+            lowpriorityParamAvailable[lowPriorityCount]=availableParam[i];
+            // printf("LP=%02X\n",availableParam[i]);
+            lowPriorityCount++;
+        }
+    }
+    for(i=0;i<lowPriorityCount;i++){
+        for(j=0;j<priorityCount;j++){
+            memset(tempArr,0,20);
+            // printf("%02X\t",priorityParmAvailable[j]);
+            sprintf(SerialTxBuffer,"01%02X",priorityParmAvailable[j]);
+            WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+            ReadFromSerialPort(SerialRxBuffer);
+            strtok(SerialRxBuffer, "\n");
+            strtok(NULL, " ");
+            strtok(NULL, " ");
+            sprintf(tempArr,"%02X=%s,",priorityParmAvailable[j],strtok(NULL, "\r\n"));
+            removespaces(tempArr);
+            strcat(paramPacket,tempArr);
+            // printf("%s,",tempArr);
+        }
+         memset(tempArr,0,20);
+        // printf("%02X\n",lowpriorityParamAvailable[i]);
+        sprintf(SerialTxBuffer,"01%02X",lowpriorityParamAvailable[i]);
+        WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+        ReadFromSerialPort(SerialRxBuffer);
+        strtok(SerialRxBuffer, "\n");
+        strtok(NULL, " ");
+        strtok(NULL, " ");
+        sprintf(tempArr,"%02X=%s;",lowpriorityParamAvailable[i],strtok(NULL, "\r\n"));
+        removespaces(tempArr);
+        strcat(paramPacket,tempArr);
+        // printf("%s",tempArr);
+    }
+    // printf("\n\nResult===%s\n\n",paramPacket);
+    (*packet).P=paramPacket;
+}
+
+int FindSupportedPIDs(int pidChunkCounter){
+    char suppPIDsArr[11]={0};
+    int suppPIDs=0;
+    sprintf(SerialTxBuffer,"01%02X",pidChunkCounter);
+    // printf("SerialTXbuffer =%s\n",SerialTxBuffer);
+    // strncpy(SerialTxBuffer, SupportedPIDs, SERIAL_BUFF_SIZE);
+    SetTotalTimeOut(1000);
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    ReadFromSerialPort(SerialRxBuffer);
+    strtok(SerialRxBuffer, "\n");
+    strtok(NULL, " ");
+    strtok(NULL, " ");
+    strcat(suppPIDsArr,strtok(NULL, " "));
+    strcat(suppPIDsArr,strtok(NULL, " "));
+    strcat(suppPIDsArr,strtok(NULL, " "));
+    strcat(suppPIDsArr,strtok(NULL, " "));
+    // printf("%s",suppPIDsArr);
+    // strrev(suppPIDsArr);
+    sscanf(suppPIDsArr,"%X", &suppPIDs);
+    //suppPIDs=(int)strtol("D83A0011",NULL,16);
+    //printf("\n%b\n",suppPIDs);
+    
+    return suppPIDs;
+}
 void ReadHfParam(enum HFreqParams hFreqParam, char *ParamResult)
 {
     char Result[23] = {0};
@@ -107,11 +250,9 @@ void ReadHfParam(enum HFreqParams hFreqParam, char *ParamResult)
     ReadFromSerialPort(SerialRxBuffer);
     strtok(SerialRxBuffer, "\n");
     strncpy(Result, strtok(NULL, "\n"), 23);
-    //printf("Before removing spaces %s\n", Result);
     removespaces(Result);
-    //printf("%s\n",Result);
+    // printf("%s\n",Result);
     strcat(ParamResult, Param);
-    //memcpy(ParamResult,Result,16);
     strcat(ParamResult, Result);
 }
 
@@ -151,11 +292,9 @@ void ReadLfParam(enum LFreqParams lFreqParam, char *ParamResult)
     ReadFromSerialPort(SerialRxBuffer);
     strtok(SerialRxBuffer, "\n");
     strncpy(Result, strtok(NULL, "\n"), 23);
-    //printf("Before removing spaces %s\n", Result);
     removespaces(Result);
-    //printf("%s\n",Result);
+    // printf("%s\n",Result);
     strcat(ParamResult, Param);
-    //memcpy(ParamResult,Result,16);
     strcat(ParamResult, Result);
 }
 
@@ -172,44 +311,82 @@ void removespaces(char *s)
 }
 void SetTroubleCodes(Packet *packet)
 {
-    char *eptr, i = 0, *res = 0,*x="-";
+    SetHeaderOn(1);
+
+    char *eptr, i = 0, *res = 0, *x = "-";
     char delim[] = "\r\n";
-    memset(DT,0,502);
+    memset(DT, 0, 502);
     strncpy(SerialTxBuffer, ATTroubleCodes, SERIAL_BUFF_SIZE);
-    
+
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     SetTotalTimeOut(1000);
     ReadFromSerialPort(SerialRxBuffer);
     removespaces(SerialRxBuffer);
     // printf("%s",SerialRxBuffer);
     //ConvertBuffToDM1Format(SerialRxBuffer);
-     
+
     res = strtok(SerialRxBuffer, delim);
     while (res != NULL)
     {
         res = strtok(NULL, delim);
-        if(res!=NULL){
-            strcat(DT,res);
+        if (res != NULL)
+        {
+            strcat(DT, res);
             // printf( "%s", res ); //printing each res
-            strcat(DT,"-");
+            strcat(DT, "-");
             // printf("-");
         }
     }
-     
+
     // printf("DT=%s\n",DT);
     (*packet).DT = DT;
-     ReadFromSerialPort(SerialRxBuffer);
+    ReadFromSerialPort(SerialRxBuffer);
 }
 
-void ConvertBuffToDM1Format(char * SerialRxBuffer){
-    int count=0;
-    printf("Before%s\n",SerialRxBuffer);
-    while(SerialRxBuffer[count]!='\0'){
-        if(SerialRxBuffer[count]=='\n'){
-            SerialRxBuffer[count]='-';
+void SetTroubleCodes15765(Packet *packet)
+{
+
+    char *eptr, i = 0, *res = 0, *x = "-";
+    char delim[] = "\r\n";
+    memset(DT, 0, 502);
+    strncpy(SerialTxBuffer, "03", SERIAL_BUFF_SIZE);
+
+    WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    SetTotalTimeOut(1000);
+    ReadFromSerialPort(SerialRxBuffer);
+    removespaces(SerialRxBuffer);
+    // printf("%s",SerialRxBuffer);
+    //ConvertBuffToDM1Format(SerialRxBuffer);
+
+    res = strtok(SerialRxBuffer, delim);
+    while (res != NULL)
+    {
+        res = strtok(NULL, delim);
+        if (res != NULL && strcmp(res,">>"))
+        {
+            strcat(DT, res);
+            // printf( "%s", res ); //printing each res
+            // strcat(DT, "-");
+            // printf("-");
         }
-        printf("count=%d\tchar=%c\thexvalue=%02X\n",count,SerialRxBuffer[count],SerialRxBuffer[count]);
+    }
+
+    // printf("DT=%s\n",DT);
+    (*packet).DT = DT;
+    ReadFromSerialPort(SerialRxBuffer);
+}
+void ConvertBuffToDM1Format(char *SerialRxBuffer)
+{
+    int count = 0;
+    printf("Before%s\n", SerialRxBuffer);
+    while (SerialRxBuffer[count] != '\0')
+    {
+        if (SerialRxBuffer[count] == '\n')
+        {
+            SerialRxBuffer[count] = '-';
+        }
+        printf("count=%d\tchar=%c\thexvalue=%02X\n", count, SerialRxBuffer[count], SerialRxBuffer[count]);
         count++;
     }
-    printf("After%s\n",SerialRxBuffer);
+    printf("After%s\n", SerialRxBuffer);
 }
