@@ -6,7 +6,7 @@ char ParamResult[820] = {0};
 char DT[502] = {0};
 DWORD BytesWritten = 0;
 
-int priorityParam15765[]={0x0C,0x04,0x0B,0x5E,0x06,0x07,0x10};
+int priorityParam15765[] = {0x0C, 0x04, 0x0B, 0x5E, 0x06, 0x07, 0x10};
 
 BOOL InitiliazeELMForJ1939()
 {
@@ -60,13 +60,12 @@ BOOL InitiliazeELMFor15765()
     }
     //Read ELM version
     ReadFromSerialPort(SerialRxBuffer);
-
     //Set protocol as 15765
     strncpy(SerialTxBuffer, ATSet15765, SERIAL_BUFF_SIZE);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
+    Sleep(10);
     //Read
     ReadFromSerialPort(SerialRxBuffer);
-
     //Set silent mointoring off
     strncpy(SerialTxBuffer, ATSilentMon, SERIAL_BUFF_SIZE);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
@@ -87,13 +86,10 @@ BOOL SetBatteryVoltage(Packet *packet)
 {
     char *eptr;
     strncpy(SerialTxBuffer, ATBatteryVoltage, SERIAL_BUFF_SIZE);
-    memset(SerialRxBuffer,0,SERIAL_BUFF_SIZE);
+    memset(SerialRxBuffer, 0, SERIAL_BUFF_SIZE);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     ReadFromSerialPort(SerialRxBuffer);
-    // printf("SerialRxBuffer=%s\n",SerialRxBuffer);
     strtok(SerialRxBuffer, "\r\n");
-    //printf("Strtok=%s\n",strtok(SerialRxBuffer, "\n"));
-    // printf("VB= %s\n", strtok(NULL, "\n"));
     (*packet).VB = strtod(strtok(NULL, "\n"), &eptr);
     (*packet).E = (*packet).VB > 0 ? 1 : 0;
 }
@@ -108,7 +104,6 @@ BOOL SetJ1939Params(Packet *packet)
         SetTotalTimeOut(200);
         for (j = F004; j <= FEF6; j++)
         {
-            // printf("i=%d\tj=%d\n",i,j);
             ReadHfParam(j, ParamResult);
             strcat(ParamResult, ",");
         }
@@ -120,106 +115,102 @@ BOOL SetJ1939Params(Packet *packet)
     // printf("\nParamResult=%s\n",ParamResult);
     (*packet).P = ParamResult;
 }
-BOOL Set15765Params(Packet *packet){
-    int suppPIDs=1, pidChunkCounter=0,i=0,j=0,availableParamCount=0,
-    priorityParmAvailable[7]={0},availableParam[100]={0},priorityCount=0,lowPriorityCount=0,
-    lowpriorityParamAvailable[100]={0};
-    char paramPacket[1200]={0}, tempArr[20]={0};
-    BOOL flag=TRUE;
-    while (suppPIDs&1!=0)
-    {
-        suppPIDs=FindSupportedPIDs(pidChunkCounter);
-        // printf("Supported PIDs==int=%d, hex=%X\n ",suppPIDs,suppPIDs);
-        for (i = 1; i < 31; i++)
-        {
-            if(1<<(pidChunkCounter-i) & suppPIDs){
-                //printf("Command given to ELM327==01%02X\n",i+pidChunkCounter);
-                availableParam[availableParamCount]=i+pidChunkCounter;
-                availableParamCount++;
-                // sprintf(SerialTxBuffer,"01%02X",i+pidChunkCounter);
-                // WriteToSerialPort(SerialTxBuffer, &BytesWritten);
-                // ReadFromSerialPort(SerialRxBuffer);
-            }
-        }
-        pidChunkCounter+=32;
-    }
+BOOL Set15765Params(Packet *packet)
+{
+    int i = 0, j = 0,
+        highPriorityParmAvailable[7] = {0}, priorityCount = 0,
+        lowPriorityParamCount = 0, lowpriorityParamAvailable[100] = {0};
+    char paramPacket[1200] = {0}, tempArr[20] = {0};
 
-    for(i=0;i<7;i++){
-        for(j=0;j<availableParamCount;j++){
-            if(priorityParam15765[i]==availableParam[j]){
-                priorityParmAvailable[priorityCount]=priorityParam15765[i];
-                // printf("HP=%02X\n",priorityParam15765[i]);
-                priorityCount++;
-            }
-        }
-    }
-    for(i=0;i<availableParamCount;i++){
-        flag=TRUE;
-        for(j=0;j<7;j++){
-            if(availableParam[i]==priorityParam15765[j]){
-                flag=FALSE;
-            }
-        }
-        if(flag){
-            lowpriorityParamAvailable[lowPriorityCount]=availableParam[i];
-            // printf("LP=%02X\n",availableParam[i]);
-            lowPriorityCount++;
-        }
-    }
-    for(i=0;i<lowPriorityCount;i++){
-        for(j=0;j<priorityCount;j++){
-            memset(tempArr,0,20);
+    FindSuppHighAndLowFreqPIDS(highPriorityParmAvailable, &priorityCount, lowpriorityParamAvailable, &lowPriorityParamCount);
+    
+   
+    for (i = 0; i < lowPriorityParamCount; i++)
+    {
+        for (j = 0; j < priorityCount; j++)
+        {
+            memset(tempArr, 0, 20);
             // printf("%02X\t",priorityParmAvailable[j]);
-            sprintf(SerialTxBuffer,"01%02X",priorityParmAvailable[j]);
+            sprintf(SerialTxBuffer, "01%02X", highPriorityParmAvailable[j]);
             WriteToSerialPort(SerialTxBuffer, &BytesWritten);
             ReadFromSerialPort(SerialRxBuffer);
             strtok(SerialRxBuffer, "\n");
             strtok(NULL, " ");
             strtok(NULL, " ");
-            sprintf(tempArr,"%02X=%s,",priorityParmAvailable[j],strtok(NULL, "\r\n"));
+            sprintf(tempArr, "%02X=%s,", highPriorityParmAvailable[j], strtok(NULL, "\r\n"));
             removespaces(tempArr);
-            strcat(paramPacket,tempArr);
+            strcat(paramPacket, tempArr);
             // printf("%s,",tempArr);
         }
-         memset(tempArr,0,20);
+        memset(tempArr, 0, 20);
         // printf("%02X\n",lowpriorityParamAvailable[i]);
-        sprintf(SerialTxBuffer,"01%02X",lowpriorityParamAvailable[i]);
+        sprintf(SerialTxBuffer, "01%02X", lowpriorityParamAvailable[i]);
         WriteToSerialPort(SerialTxBuffer, &BytesWritten);
         ReadFromSerialPort(SerialRxBuffer);
         strtok(SerialRxBuffer, "\n");
         strtok(NULL, " ");
         strtok(NULL, " ");
-        sprintf(tempArr,"%02X=%s;",lowpriorityParamAvailable[i],strtok(NULL, "\r\n"));
+        sprintf(tempArr, "%02X=%s;", lowpriorityParamAvailable[i], strtok(NULL, "\r\n"));
         removespaces(tempArr);
-        strcat(paramPacket,tempArr);
+        strcat(paramPacket, tempArr);
         // printf("%s",tempArr);
     }
     // printf("\n\nResult===%s\n\n",paramPacket);
-    (*packet).P=paramPacket;
+    (*packet).P = paramPacket;
 }
 
-int FindSupportedPIDs(int pidChunkCounter){
-    char suppPIDsArr[11]={0};
-    int suppPIDs=0;
-    sprintf(SerialTxBuffer,"01%02X",pidChunkCounter);
-    // printf("SerialTXbuffer =%s\n",SerialTxBuffer);
-    // strncpy(SerialTxBuffer, SupportedPIDs, SERIAL_BUFF_SIZE);
+BOOL FindSuppHighAndLowFreqPIDS(int *highPriorityParmAvailable, int *highPriorityParamCount, int *lowPriorityParamAvailable, int *lowPriorityParamCount)
+{
+    int suppPIDs = 1, pidChunkCounter = 0, i = 0;
+    *highPriorityParamCount=0;
+    *lowPriorityParamCount=0;
+    while (suppPIDs & 1 != 0)
+    {
+        suppPIDs = FindSupportedPIDs(pidChunkCounter);
+        // printf("Supported PIDs==int=%d, hex=%X\n ",suppPIDs,suppPIDs);
+
+        for (i = 1; i < 31; i++)
+        {
+            if (1 << (pidChunkCounter - i) & suppPIDs)
+            {
+                // printf("Command given to ELM327==01%02X\n",i+pidChunkCounter);
+
+                if (checkValuePresentInArray((i + pidChunkCounter), priorityParam15765,7))
+                {
+                    highPriorityParmAvailable[*highPriorityParamCount] = i + pidChunkCounter;
+                    // printf("HP=%02X\n", highPriorityParmAvailable[*highPriorityParamCount]);
+                    *highPriorityParamCount=*highPriorityParamCount+1;
+                }
+                else
+                {
+                    lowPriorityParamAvailable[*lowPriorityParamCount] = i + pidChunkCounter;
+                    // printf("LP=%02X\n", lowPriorityParamAvailable[*lowPriorityParamCount]);
+                    *lowPriorityParamCount=*lowPriorityParamCount+1;
+                }
+            }
+        }
+        pidChunkCounter += 32;
+    }
+}
+
+int FindSupportedPIDs(int pidChunkCounter)
+{
+    char suppPIDsArr[11] = {0};
+    int suppPIDs = 0;
+    sprintf(SerialTxBuffer, "01%02X", pidChunkCounter);
     SetTotalTimeOut(1000);
     WriteToSerialPort(SerialTxBuffer, &BytesWritten);
     ReadFromSerialPort(SerialRxBuffer);
     strtok(SerialRxBuffer, "\n");
     strtok(NULL, " ");
     strtok(NULL, " ");
-    strcat(suppPIDsArr,strtok(NULL, " "));
-    strcat(suppPIDsArr,strtok(NULL, " "));
-    strcat(suppPIDsArr,strtok(NULL, " "));
-    strcat(suppPIDsArr,strtok(NULL, " "));
-    // printf("%s",suppPIDsArr);
-    // strrev(suppPIDsArr);
-    sscanf(suppPIDsArr,"%X", &suppPIDs);
+    strcat(suppPIDsArr, strtok(NULL, " "));
+    strcat(suppPIDsArr, strtok(NULL, " "));
+    strcat(suppPIDsArr, strtok(NULL, " "));
+    strcat(suppPIDsArr, strtok(NULL, " "));
+    sscanf(suppPIDsArr, "%X", &suppPIDs);
     //suppPIDs=(int)strtol("D83A0011",NULL,16);
-    //printf("\n%b\n",suppPIDs);
-    
+
     return suppPIDs;
 }
 void ReadHfParam(enum HFreqParams hFreqParam, char *ParamResult)
@@ -309,6 +300,20 @@ void removespaces(char *s)
         }
     } while (*s++ = *d++);
 }
+
+BOOL checkValuePresentInArray(int val, int Arr[], int lengthOfArr)
+{
+    int i = 0;
+    for (i = 0; i < lengthOfArr; i++)
+    {
+        
+        if (val == Arr[i])
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 void SetTroubleCodes(Packet *packet)
 {
     SetHeaderOn(1);
@@ -362,7 +367,7 @@ void SetTroubleCodes15765(Packet *packet)
     while (res != NULL)
     {
         res = strtok(NULL, delim);
-        if (res != NULL && strcmp(res,">>"))
+        if (res != NULL && strcmp(res, ">>"))
         {
             strcat(DT, res);
             // printf( "%s", res ); //printing each res

@@ -76,8 +76,8 @@ BOOL ReadFromSerialPort(char *serialBuffer)
     unsigned char tempChar;
     char RxBuffer[64]="stop";
     BOOL Status;
+
     //Setting Receive Mask;
-    
     Status = SetCommMask(hComm, EV_RXCHAR);
     memset(serialBuffer,0,SERIAL_BUFF_SIZE);
     if (Status == FALSE)
@@ -99,34 +99,25 @@ BOOL ReadFromSerialPort(char *serialBuffer)
     //Read data and store in a buffer
     do
     {
-        // if(logg)
-        // printf("\11111111111111  trouble%s\n",packet.P);
         Status = ReadFile(hComm, &tempChar, sizeof(tempChar), &NoBytesRead, NULL);
         serialBuffer[loop] = tempChar;
         ++loop;
         if(tempChar=='\n'){
            
             lineCount++;
-            // printf("LineCount=%d\n",lineCount);
-            // printf("line count= %d\n",lineCount);
         }
-        // if(logg)
-        // printf("\222222222222  trouble%s\n",packet.P);
         if(lineCount>=21){
             WriteToSerialPort(RxBuffer,&BytesWritten);
             PurgeComm(hComm,0x0008);
-            // memset(serialBuffer,0,SERIAL_BUFF_SIZE);
             break;
         }
     } while (NoBytesRead > 0);
-    // if(logg)
-    //     printf("\3333333333333333 trouble%s\n",packet.P);
 
     --loop; //Get Actual length of received data
 
     //print receive data on console
-    // if(logg)
-    // printf("%s", serialBuffer);
+    
+    //printf("%s", serialBuffer);
     return TRUE;
     
 }

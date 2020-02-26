@@ -30,5 +30,6 @@ void SetTroubleCodes15765(Packet *packet);
 void ConvertBuffToDM1Format(char * SerialRxBuffer);
 BOOL Set15765Params(Packet *packet);
 int FindSupportedPIDs(int pidChunkCounter);
-
+BOOL checkValuePresentInArray(int val,int Arr[],int lengthOfArr);
+BOOL FindSuppHighAndLowFreqPIDS(int * highPriorityParmAvailable,int * highPriorityParamCount,int * lowPriorityParamAvailable, int * lowPriorityParamCount);
 #endif //
